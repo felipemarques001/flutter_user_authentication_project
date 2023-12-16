@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:login_ui/components/auth_button.dart';
 import 'package:login_ui/components/auth_textfield.dart';
 import 'package:login_ui/components/auth_image_button_container.dart';
+import 'package:login_ui/models/user_model.dart';
+import 'package:login_ui/pages/login_page.dart';
 import 'package:login_ui/services/authentication_service.dart';
 import 'package:login_ui/services/snackbar_service.dart';
 
@@ -15,11 +17,9 @@ class RegisterPage extends StatefulWidget {
 
 class _RegisterPageState extends State<RegisterPage> {
   final _formKey = GlobalKey<FormState>();
-  final _usernamecontroller = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _password2Controller = TextEditingController();
   final _authenticationService = AuthenticationService();
   final _snackbarService = SnackbarService();
+  final _user = UserModel.empty();
 
   @override
   Widget build(BuildContext context) {
@@ -55,23 +55,24 @@ class _RegisterPageState extends State<RegisterPage> {
               child: Column(
                 children: [
                   AuthTextField(
-                    hintText: 'Nome de usuário',
-                    obsecureText: false,
-                    controller: _usernamecontroller,
+                    label: 'Nome de usuário',
+                    validator: (value) => _user.username.validator(null),
+                    onChanged: (value) => _user.setUsername(value),
                   ),
                   const SizedBox(height: 10),
                   AuthTextField(
-                    hintText: 'Senha',
+                    label: 'Senha',
+                    validator: (value) => _user.password.validator(null),
                     obsecureText: true,
-                    controller: _passwordController,
+                    onChanged: (value) => _user.setPassword(value),
                   ),
                   const SizedBox(height: 10),
                   AuthTextField(
-                    hintText: 'Confirmar senha',
+                    label: 'Confirmar senha',
                     obsecureText: true,
-                    controller: _password2Controller,
-                    validator: passwordConfirmValidator,
-                    useDefaultValidation: false,
+                    validator: (value) => _user.confirmPassword
+                        .validator(_user.password.getValue),
+                    onChanged: (value) => _user.setConfirmPassword(value),
                   ),
                   const SizedBox(height: 40),
                   AuthButton(onTap: registerUser, buttonText: 'Registrar')
@@ -130,16 +131,12 @@ class _RegisterPageState extends State<RegisterPage> {
                 children: [
                   const TextSpan(text: 'Já possuí uma conta?'),
                   TextSpan(
-                    text: ' Entrar',
-                    style: const TextStyle(
-                      color: Colors.deepOrange,
-                      fontWeight: FontWeight.bold,
-                    ),
-                    recognizer: TapGestureRecognizer()
-                      ..onTap = () {
-                        Navigator.of(context).pushReplacementNamed('/login');
-                      },
-                  )
+                      text: ' Entrar',
+                      style: const TextStyle(
+                        color: Colors.deepOrange,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      recognizer: TapGestureRecognizer()..onTap = openLoginPage)
                 ],
               ),
             ),
@@ -150,54 +147,46 @@ class _RegisterPageState extends State<RegisterPage> {
     );
   }
 
-  String? passwordConfirmValidator(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Este campo não pode ser vazio!';
-    }
-    if (_passwordController.text != _password2Controller.text) {
-      return 'As senhas não condizem!';
-    }
-    return null;
-  }
-
+  // Método responsável por validar os formulários e fazer a requisição de registro
   void registerUser() async {
     try {
+      // Só entra no if se todos os formulário estiverem validados
       if (_formKey.currentState!.validate()) {
-        final String username = _usernamecontroller.text;
-        final String password = _passwordController.text;
-
         final serviceResponse =
-            await _authenticationService.registerUser(username, password);
+            await _authenticationService.registerUser(_user);
 
         (serviceResponse == null)
-            ? showMessageUserRegistered()
-            : showMessageError(serviceResponse);
+            ? actionsToUserRegistered()
+            : actionsToErrorInRegisterUser(serviceResponse);
       }
     } catch (e) {
-      showMessageException();
+      actionToException();
     }
   }
 
-  void showMessageUserRegistered() {
-    _snackbarService.showSnackBar(
-        context: context,
-        message: 'Usuário cadastrado com sucesso!',
-        isError: false);
-  }
-
-  void showMessageError(String message) {
-    _snackbarService.showSnackBar(
-      context: context,
-      message: message,
-      isError: true,
+  void openLoginPage() {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const LoginPage()),
     );
   }
 
-  void showMessageException() {
-    _snackbarService.showSnackBar(
-      context: context,
-      message: 'Erro na operação, por favor tente novamente mais tarde!',
-      isError: true,
-    );
+  // Ações que devem ser feitas quando o usuário ser registrado com sucesso!
+  void actionsToUserRegistered() {
+    _snackbarService.showUserRegisteredMessage(context);
+    FocusScope.of(context).unfocus();
+    // Faz a página de login ser aberta
+    openLoginPage();
+  }
+
+  // Ações que devem ser feitas quando houver erro para registrar o usuário!
+  void actionsToErrorInRegisterUser(String message) {
+    _snackbarService.showErrorMessage(context, message);
+    FocusScope.of(context).unfocus();
+  }
+
+  // Ação que deve ser feita se caso houver uma exceção durante o processo
+  void actionToException() {
+    _snackbarService.showExceptionMessage(context);
   }
 }

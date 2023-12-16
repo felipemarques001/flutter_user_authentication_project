@@ -3,6 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:login_ui/components/auth_image_button_container.dart';
 import 'package:login_ui/components/auth_button.dart';
 import 'package:login_ui/components/auth_textfield.dart';
+import 'package:login_ui/models/user_model.dart';
+import 'package:login_ui/pages/home_page.dart';
+import 'package:login_ui/pages/register_page.dart';
 import 'package:login_ui/services/authentication_service.dart';
 import 'package:login_ui/services/snackbar_service.dart';
 
@@ -15,10 +18,9 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   final _formKey = GlobalKey<FormState>();
-  final _usernamecontroller = TextEditingController();
-  final _passwordController = TextEditingController();
-  final _authenticationService = AuthenticationService();
   final _snackbarService = SnackbarService();
+  final _authenticationService = AuthenticationService();
+  final _user = UserModel.empty();
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +33,9 @@ class _LoginPageState extends State<LoginPage> {
       body: SingleChildScrollView(
         child: Column(
           children: [
+            // Se estiver rodando o app na web, por favor descomente a linha de baixo
+            // Se estiver rodando em algum emulador, por favor a mantenha comentada
+            // const SizedBox(height: 60),
             const Icon(
               Icons.lock,
               size: 90,
@@ -55,15 +60,16 @@ class _LoginPageState extends State<LoginPage> {
               child: Column(
                 children: [
                   AuthTextField(
-                    hintText: 'Usuário',
-                    obsecureText: false,
-                    controller: _usernamecontroller,
+                    label: 'Nome de usuário',
+                    validator: (value) => _user.username.validator(''),
+                    onChanged: (value) => _user.setUsername(value),
                   ),
                   const SizedBox(height: 10),
                   AuthTextField(
-                    hintText: 'Senha',
+                    label: 'Senha',
                     obsecureText: true,
-                    controller: _passwordController,
+                    validator: (value) => _user.password.validator(''),
+                    onChanged: (value) => _user.setPassword(value),
                   ),
                   const SizedBox(height: 40),
                   AuthButton(onTap: loginUser, buttonText: 'Entrar'),
@@ -156,9 +162,7 @@ class _LoginPageState extends State<LoginPage> {
                       fontWeight: FontWeight.bold,
                     ),
                     recognizer: TapGestureRecognizer()
-                      ..onTap = () {
-                        Navigator.of(context).pushReplacementNamed('/register');
-                      },
+                      ..onTap = () => openNewPage(const RegisterPage()),
                   )
                 ],
               ),
@@ -170,21 +174,46 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  void loginUser() {
+  // Faz uma nova página ser aberta, estava chamando o Navigator
+  // mais de uma vez, então criei esta função para não repetir o código
+  void openNewPage(dynamic page) {
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => page),
+    );
+  }
+
+  // Método responsável por validar os formulários e fazer a requisição de login
+  void loginUser() async {
     try {
+      // Só entra no if se todos os formulário estiverem validados
       if (_formKey.currentState!.validate()) {
-        print('Form válido');
+        final serviceResponse = await _authenticationService.loginUser(_user);
+
+        (serviceResponse == null)
+            ? actionsToUserLogged()
+            : actionsToErrorInLoginUser(serviceResponse);
       }
     } catch (e) {
-      showMessageException();
+      print(e);
+      actionToException();
     }
   }
 
-  void showMessageException() {
-    _snackbarService.showSnackBar(
-      context: context,
-      message: 'Erro na operação, por favor tente novamente mais tarde!',
-      isError: true,
-    );
+  // Ações que devem ser feitas quando o usuário logar com sucesso!
+  void actionsToUserLogged() {
+    FocusScope.of(context).unfocus();
+    openNewPage(HomePage(username: _user.username.getValue));
+  }
+
+  // Ações que devem ser feitas quando houver erro para logar o usuário!
+  void actionsToErrorInLoginUser(String message) {
+    _snackbarService.showErrorMessage(context, message);
+    FocusScope.of(context).unfocus();
+  }
+
+  // Ação que deve ser feita se caso houver uma exceção durante o processo
+  void actionToException() {
+    _snackbarService.showExceptionMessage(context);
   }
 }

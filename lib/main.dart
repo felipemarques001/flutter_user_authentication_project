@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:login_ui/pages/login_page.dart';
-import 'package:login_ui/pages/register_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -15,14 +14,9 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Flutter login page',
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      initialRoute: '/login',
-      routes: {
-        '/login': (context) => const LoginPage(),
-        '/register': (context) => const RegisterPage()
-      },
+      home: const LoginPage(),
     );
   }
 }

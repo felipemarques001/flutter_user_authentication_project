@@ -1,19 +1,17 @@
 import 'package:flutter/material.dart';
 
 class AuthTextField extends StatelessWidget {
-  final String hintText;
+  final String label;
   final bool obsecureText;
-  String? Function(String? value)? validator;
-  final TextEditingController controller;
-  final bool useDefaultValidation;
+  final String? Function(String? value) validator;
+  final void Function(String? value) onChanged;
 
-  AuthTextField({
+  const AuthTextField({
     super.key,
-    required this.hintText,
-    required this.obsecureText,
-    required this.controller,
-    this.validator, // Por padrão, validator é null
-    this.useDefaultValidation = true,
+    required this.label,
+    this.obsecureText = false,
+    required this.validator,
+    required this.onChanged,
   });
 
   @override
@@ -21,10 +19,12 @@ class AuthTextField extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 25.0),
       child: TextFormField(
-        controller: controller,
-        validator: (useDefaultValidation) ? defaultFieldValidator : validator,
+        onChanged: onChanged,
+        validator: validator,
         obscureText: obsecureText,
         decoration: InputDecoration(
+          labelText: label,
+          labelStyle: TextStyle(color: Colors.grey[700]),
           enabledBorder: const OutlineInputBorder(
             borderSide: BorderSide(color: Colors.white),
           ),
@@ -39,16 +39,8 @@ class AuthTextField extends StatelessWidget {
           ),
           fillColor: Colors.grey.shade200,
           filled: true,
-          hintText: hintText,
         ),
       ),
     );
-  }
-
-  String? defaultFieldValidator(String? value) {
-    if (value == null || value.isEmpty) {
-      return 'Este campo não pode ser vazio!';
-    }
-    return null;
   }
 }
