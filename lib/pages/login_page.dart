@@ -33,8 +33,6 @@ class _LoginPageState extends State<LoginPage> {
       body: SingleChildScrollView(
         child: Column(
           children: [
-            // Se estiver rodando o app na web, por favor descomente a linha de baixo
-            // Se estiver rodando em algum emulador, por favor a mantenha comentada
             const SizedBox(height: 60),
             const Icon(
               Icons.lock,
